@@ -1,0 +1,298 @@
+<style>
+  .dope-widget {
+    font-family: Arial, sans-serif;
+    max-width: 850px;
+    margin: 20px auto;
+    padding: 20px;
+    border: 2px solid #333;
+    border-radius: 8px;
+    background-color: #f4f6f8;
+    text-align: center;
+  }
+
+  .studio-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 15px;
+    margin-bottom: 20px;
+  }
+
+  .panel {
+    background: #fff;
+    padding: 15px;
+    border-radius: 6px;
+    border: 1px solid #ccc;
+    text-align: left;
+  }
+
+  .panel h3 {
+    margin-top: 0;
+    font-size: 1.1rem;
+    color: #1976d2;
+    border-bottom: 2px solid #e3f2fd;
+    padding-bottom: 5px;
+  }
+
+  .canvas-stage {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 4 / 3;
+    background-color: #1a1a1a;
+    border-radius: 4px;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 10px;
+  }
+
+  /* Dope Sheet Table Styling */
+  .dope-sheet-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.85rem;
+    margin-top: 10px;
+  }
+
+  .dope-sheet-table th, .dope-sheet-table td {
+    border: 1px solid #ddd;
+    padding: 6px;
+    text-align: center;
+  }
+
+  .dope-sheet-table th {
+    background-color: #e3f2fd;
+    color: #0d47a1;
+  }
+
+  .dope-row.active-frame {
+    background-color: #fff9c4 !important;
+    font-weight: bold;
+  }
+
+  .track-controls {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 15px;
+    background: #fff;
+    padding: 10px 15px;
+    border-radius: 6px;
+    border: 1px solid #ccc;
+  }
+
+  .action-btn {
+    padding: 8px 16px;
+    font-size: 0.95rem;
+    font-weight: bold;
+    cursor: pointer;
+    background-color: #1976d2;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    transition: background 0.2s;
+  }
+
+  .action-btn:hover { background-color: #115293; }
+  .action-btn:disabled { background-color: #ccc; cursor: not-allowed; }
+
+  .phoneme-selector {
+    display: flex;
+    gap: 5px;
+    justify-content: center;
+    margin-top: 10px;
+  }
+
+  .phoneme-btn {
+    padding: 6px 12px;
+    font-size: 0.85rem;
+    font-weight: bold;
+    cursor: pointer;
+    background-color: #e0e0e0;
+    border: 1px solid #999;
+    border-radius: 4px;
+  }
+
+  .phoneme-btn.selected {
+    background-color: #388e3c;
+    color: white;
+    border-color: #2e7d32;
+  }
+
+  .status-banner {
+    margin-top: 15px;
+    padding: 10px;
+    font-size: 0.95rem;
+    font-weight: bold;
+    border-radius: 4px;
+    background: #e8f5e9;
+    color: #2e7d32;
+    border: 1px solid #a5d6a7;
+  }
+</style>
+
+<div class="dope-widget">
+  <h2>Voice Recording & Dope Sheet Sync Studio</h2>
+  <p>Step into the animator's chair. Use the track breakdown (dope sheet) to map phonetic mouth shapes to the correct audio frames for the dialogue line: <strong>"Oh, wow!"</strong></p>
+
+  <div class="studio-grid">
+    <!-- Left Panel: Character Preview & Mouth Control -->
+    <div class="panel">
+      <h3>Live Animation Preview</h3>
+      <div class="canvas-stage" id="characterStage">
+        <!-- SVG Character Head -->
+        <svg width="220" height="220" viewBox="0 0 200 200">
+          <circle cx="100" cy="100" r="70" fill="#ffb74d"/>
+          <!-- Eyes -->
+          <circle cx="75" cy="85" r="8" fill="#fff"/>
+          <circle cx="75" cy="85" r="3" fill="#000"/>
+          <circle cx="125" cy="85" r="8" fill="#fff"/>
+          <circle cx="125" cy="85" r="3" fill="#000"/>
+          <!-- Dynamic Mouth Shape (changes based on active frame dope sheet sync) -->
+          <g id="mouthShape">
+            <path d="M 85 130 Q 100 145 115 130 Z" fill="#d32f2f" />
+          </g>
+        </svg>
+      </div>
+      <div style="font-size: 0.85rem; color: #555; text-align: center;">
+        Current Playhead Frame: <span id="currentFrameDisplay" style="font-weight:bold; color:#1976d2;">1</span> / 6
+      </div>
+    </div>
+
+    <!-- Right Panel: The Dope Sheet Breakdown -->
+    <div class="panel">
+      <h3>Track Breakdown (Dope Sheet)</h3>
+      <table class="dope-sheet-table">
+        <thead>
+          <tr>
+            <th>Frame</th>
+            <th>Audio Waveform</th>
+            <th>Target Phoneme</th>
+            <th>Your Mapping</th>
+          </tr>
+        </thead>
+        <tbody id="dopeTableBody">
+          <!-- Populated via JS -->
+        </tbody>
+      </table>
+      <div class="phoneme-selector">
+        <span style="font-size:0.85rem; align-self:center; font-weight:bold; margin-right:5px;">Select Shape:</span>
+        <button class="phoneme-btn" onclick="assignPhoneme('REST')">REST (-)</button>
+        <button class="phoneme-btn" onclick="assignPhoneme('O')">O Shape</button>
+        <button class="phoneme-btn" onclick="assignPhoneme('W')">W / W-Vowel</button>
+        <button class="phoneme-btn" onclick="assignPhoneme('E')">E / Wide</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="track-controls">
+    <button class="action-btn" onclick="scrubFrame(-1)">◀ Prev Frame</button>
+    <span id="audioStatusText" style="font-size: 0.9rem; font-weight: bold; color: #444;">Audio: "O - h - , - w - o - w"</span>
+    <button class="action-btn" onclick="scrubFrame(1)">Next Frame ▶</button>
+    <button class="action-btn" style="background-color: #d32f2f;" onclick="testSync()">Test Lip-Sync</button>
+  </div>
+
+  <div class="status-banner" id="syncStatus">
+    Instructions: Click through the 6 frames on the dope sheet table, select the correct phonetic mouth shape for each sound ("O", "REST", "W", "E"), and click Test Lip-Sync!
+  </div>
+</div>
+
+<script>
+  // Dope sheet data for "Oh, wow!" across 6 frames
+  const dopeData = [
+    { frame: 1, sound: "O (Start)", correct: "O" },
+    { frame: 2, sound: "h (Breath)", correct: "REST" },
+    { frame: 3, sound: ", (Pause)", correct: "REST" },
+    { frame: 4, sound: "w (Glide)", correct: "W" },
+    { frame: 5, sound: "o (Open Vowel)", correct: "O" },
+    { frame: 6, sound: "w (Settle)", correct: "W" }
+  ];
+
+  let currentFrame = 1;
+  // User mapping storage
+  let userMapping = { 1: "", 2: "", 3: "", 4: "", 5: "", 6: "" };
+
+  const svgMouths = {
+    "REST": '<path d="M 85 135 Q 100 130 115 135" fill="none" stroke="#d32f2f" stroke-width="4" stroke-linecap="round"/>',
+    "O": '<circle cx="100" cy="135" r="12" fill="#d32f2f"/>',
+    "W": '<ellipse cx="100" cy="135" rx="8" ry="12" fill="#d32f2f"/>',
+    "E": '<path d="M 80 135 L 120 135" stroke="#d32f2f" stroke-width="6" stroke-linecap="round"/>',
+    "": '<path d="M 90 135 L 110 135" stroke="#999" stroke-width="2" stroke-dasharray="2,2"/>'
+  };
+
+  function renderDopeTable() {
+    const tbody = document.getElementById('dopeTableBody');
+    tbody.innerHTML = "";
+    dopeData.forEach(row => {
+      let tr = document.createElement('tr');
+      tr.className = `dope-row ${row.frame === currentFrame ? 'active-frame' : ''}`;
+      tr.onclick = () => selectFrame(row.frame);
+      
+      let mapped = userMapping[row.frame] ? `<span style="color:#1976d2; font-weight:bold;">${userMapping[row.frame]}</span>` : `<span style="color:#999;">[Select]</span>`;
+      
+      tr.innerHTML = `
+        <td>${row.frame}</td>
+        <td><code>${row.sound}</code></td>
+        <td>Phoneme Map</td>
+        <td>${mapped}</td>
+      `;
+      tbody.appendChild(tr);
+    });
+  }
+
+  function selectFrame(f) {
+    currentFrame = f;
+    document.getElementById('currentFrameDisplay').textContent = currentFrame;
+    updatePreviewMouth();
+    renderDopeTable();
+  }
+
+  function scrubFrame(dir) {
+    currentFrame += dir;
+    if (currentFrame > 6) currentFrame = 1;
+    if (currentFrame < 1) currentFrame = 6;
+    selectFrame(currentFrame);
+  }
+
+  function assignPhoneme(shape) {
+    userMapping[currentFrame] = shape;
+    renderDopeTable();
+    updatePreviewMouth();
+    // Auto advance to next frame for smooth workflow
+    if (currentFrame < 6) {
+      setTimeout(() => scrubFrame(1), 200);
+    }
+  }
+
+  function updatePreviewMouth() {
+    const currentShape = userMapping[currentFrame] || "";
+    document.getElementById('mouthShape').innerHTML = svgMouths[currentShape] || svgMouths[""];
+  }
+
+  function testSync() {
+    let allCorrect = true;
+    for (let i = 1; i <= 6; i++) {
+      if (userMapping[i] !== dopeData[i-1].correct) {
+        allCorrect = false;
+        break;
+      }
+    }
+
+    const banner = document.getElementById('syncStatus');
+    if (allCorrect) {
+      banner.style.background = "#e8f5e9";
+      banner.style.color = "#2e7d32";
+      banner.style.borderColor = "#a5d6a7";
+      banner.textContent = "🎉 Success! Perfect track breakdown sync! The character's mouth shapes align flawlessly with the vocal phonemes on the dope sheet.";
+    } else {
+      banner.style.background = "#ffebee";
+      banner.style.color = "#c62828";
+      banner.style.borderColor = "#ef9a9a";
+      banner.textContent = "⚠️ Lip-sync mismatch detected! Review the dope sheet audio waveform cues (Frame 1: 'O', Frame 2-3: Rest, Frame 4-6: W/O) and adjust your phoneme mapping.";
+    }
+  }
+
+  // Initialize on load
+  renderDopeTable();
+  updatePreviewMouth();
+</script>
